@@ -166,12 +166,12 @@ class _MagicCounterPageState extends State<MagicCounterPage> {
                   decoration: InputDecoration(
                     labelText: 'Введи закляття, щоб вивчити його...',
                     labelStyle: TextStyle(
-                      color: textColor.withOpacity(0.6),
+                      color: textColor.withValues(alpha: 0.6),
                       fontSize: 18,
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(
-                        color: Colors.amber.withOpacity(0.5),
+                        color: Colors.amber.withValues(alpha: 0.5),
                         width: 2,
                       ),
                       borderRadius: BorderRadius.circular(15),
