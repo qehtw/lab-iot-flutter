@@ -85,7 +85,10 @@ class _MagicCounterPageState extends State<MagicCounterPage> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: const Text('Academy of Magic IoT', style: TextStyle(fontSize: 24)),
+        title: const Text(
+          'Academy of Magic IoT',
+          style: TextStyle(fontSize: 24),
+        ),
         backgroundColor: Colors.transparent,
         foregroundColor: textColor,
       ),
@@ -104,27 +107,50 @@ class _MagicCounterPageState extends State<MagicCounterPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('📖 КНИГА ЗАКЛЯТЬ:', 
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.amber)),
+                  const Text(
+                    '📖 КНИГА ЗАКЛЯТЬ:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.amber,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text(_displaySpell('lumos', '*****'), style: _spellStyle(textColor)),
-                  Text(_displaySpell('nox', '***'), style: _spellStyle(textColor)),
-                  Text(_displaySpell('avada kedavra', '***** *******'), style: _spellStyle(textColor)),
-                  Text(_displaySpell('expelliarmus [n]', '************ [n]'), style: _spellStyle(textColor)),
+                  Text(
+                    _displaySpell('lumos', '*****'),
+                    style: _spellStyle(textColor),
+                  ),
+                  Text(
+                    _displaySpell('nox', '***'),
+                    style: _spellStyle(textColor),
+                  ),
+                  Text(
+                    _displaySpell('avada kedavra', '***** *******'),
+                    style: _spellStyle(textColor),
+                  ),
+                  Text(
+                    _displaySpell('expelliarmus [n]', '************ [n]'),
+                    style: _spellStyle(textColor),
+                  ),
                   const SizedBox(height: 10),
-                  Text('Вивчено: ${_learnedSpells.length}/4', 
-                    style: const TextStyle(fontSize: 12, color: Colors.amber)),
+                  Text(
+                    'Вивчено: ${_learnedSpells.length}/4',
+                    style: const TextStyle(fontSize: 12, color: Colors.amber),
+                  ),
                 ],
               ),
             ),
           ),
-          
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Energy Level:', style: TextStyle(color: textColor, fontSize: 22)),
+                Text(
+                  'Energy Level:',
+                  style: TextStyle(color: textColor, fontSize: 22),
+                ),
                 Text(
                   '$_counter',
                   style: TextStyle(
@@ -139,13 +165,22 @@ class _MagicCounterPageState extends State<MagicCounterPage> {
                   style: TextStyle(color: textColor, fontSize: 20),
                   decoration: InputDecoration(
                     labelText: 'Введи закляття, щоб вивчити його...',
-                    labelStyle: TextStyle(color: textColor.withOpacity(0.6), fontSize: 18),
+                    labelStyle: TextStyle(
+                      color: textColor.withOpacity(0.6),
+                      fontSize: 18,
+                    ),
                     enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.amber.withOpacity(0.5), width: 2),
+                      borderSide: BorderSide(
+                        color: Colors.amber.withOpacity(0.5),
+                        width: 2,
+                      ),
                       borderRadius: BorderRadius.circular(15),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.amber, width: 3),
+                      borderSide: const BorderSide(
+                        color: Colors.amber,
+                        width: 3,
+                      ),
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
@@ -155,7 +190,11 @@ class _MagicCounterPageState extends State<MagicCounterPage> {
                 Text(
                   _message,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: textColor, fontStyle: FontStyle.italic, fontSize: 20),
+                  style: TextStyle(
+                    color: textColor,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 20,
+                  ),
                 ),
               ],
             ),
@@ -166,6 +205,11 @@ class _MagicCounterPageState extends State<MagicCounterPage> {
   }
 
   TextStyle _spellStyle(Color color) {
-    return TextStyle(fontFamily: 'Courier', fontSize: 16, color: color, height: 1.6);
+    return TextStyle(
+      fontFamily: 'Courier',
+      fontSize: 16,
+      color: color,
+      height: 1.6,
+    );
   }
 }
