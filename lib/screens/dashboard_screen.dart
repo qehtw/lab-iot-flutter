@@ -115,8 +115,9 @@ class _TorchSheetState extends State<_TorchSheet> {
         _showUnsupported('Помилка: ${e.message}');
       }
     } on MissingPluginException {
-      if (mounted)
+      if (mounted) {
         _showUnsupported('Ліхтарик не підтримується на цій платформі.');
+      }
     }
   }
 
