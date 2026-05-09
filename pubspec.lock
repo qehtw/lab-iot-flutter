@@ -437,6 +437,15 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  smartnest_torch:
+    dependency: "direct main"
+    description:
+      path: "."
+      ref: HEAD
+      resolved-ref: "6df2cc4973cea11f961d5c294c7023471480e557"
+      url: "https://github.com/qehtw/smartnest_torch.git"
+    source: git
+    version: "1.0.0"
   source_span:
     dependency: transitive
     description:

@@ -41,6 +41,9 @@ dependencies:
   http: ^1.2.0
   firebase_core: ^3.0.0
   cloud_firestore: ^5.0.0
+  smartnest_torch:
+    git:
+      url: https://github.com/qehtw/smartnest_torch.git
 
 dev_dependencies:
   flutter_test:

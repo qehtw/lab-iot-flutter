@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:smartnest_torch/smartnest_torch.dart';
 
 import '../core/models/user.dart';
 import '../cubits/connectivity_cubit.dart';
@@ -60,6 +62,7 @@ class DashboardScreen extends StatelessWidget {
       actions: [
         GestureDetector(
           onTap: () => Navigator.pushNamed(context, '/profile'),
+          onLongPress: () => _showTorchSheet(context),
           child: Padding(
             padding: const EdgeInsets.only(right: 16),
             child: CircleAvatar(
@@ -75,6 +78,117 @@ class DashboardScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _showTorchSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1F2E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const _TorchSheet(),
+    );
+  }
+}
+
+class _TorchSheet extends StatefulWidget {
+  const _TorchSheet();
+
+  @override
+  State<_TorchSheet> createState() => _TorchSheetState();
+}
+
+class _TorchSheetState extends State<_TorchSheet> {
+  bool _torchOn = false;
+
+  Future<void> _toggle() async {
+    try {
+      final isOn = await SmartNestTorch.toggle();
+      if (mounted) setState(() => _torchOn = isOn);
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'NO_TORCH') {
+        _showUnsupported('Ліхтарик недоступний на цьому пристрої.');
+      } else {
+        _showUnsupported('Помилка: ${e.message}');
+      }
+    } on MissingPluginException {
+      if (mounted) _showUnsupported('Ліхтарик не підтримується на цій платформі.');
+    }
+  }
+
+  void _showUnsupported(String message) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1F2E),
+        title: const Text(
+          'Не підтримується',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(message, style: const TextStyle(color: Colors.white54)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Ліхтарик',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 32),
+          GestureDetector(
+            onTap: _toggle,
+            child: Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _torchOn
+                    ? primary.withValues(alpha: 0.2)
+                    : Colors.white12,
+                border: Border.all(
+                  color: _torchOn ? primary : Colors.white24,
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                _torchOn ? Icons.flashlight_on : Icons.flashlight_off,
+                size: 48,
+                color: _torchOn ? primary : Colors.white38,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            _torchOn ? 'Увімкнено' : 'Вимкнено',
+            style: TextStyle(
+              color: _torchOn ? primary : Colors.white38,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
     );
   }
 }
