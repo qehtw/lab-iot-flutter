@@ -213,9 +213,7 @@ class _ErrorView extends StatelessWidget {
             label: const Text('Retry'),
             style: OutlinedButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.primary,
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              side: BorderSide(color: Theme.of(context).colorScheme.primary),
             ),
           ),
         ],
