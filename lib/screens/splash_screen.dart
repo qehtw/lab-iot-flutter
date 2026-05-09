@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../data/connectivity_plus_repository.dart';
-import '../data/local_auth_repository.dart';
-import '../data/local_user_repository.dart';
+import '../cubits/connectivity_cubit.dart';
+import '../cubits/user_cubit.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,9 +12,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  final _authRepo = LocalAuthRepository(LocalUserRepository());
-  final _connRepo = ConnectivityPlusRepository();
-
   @override
   void initState() {
     super.initState();
@@ -25,20 +22,24 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
 
-    final user = await _authRepo.getCurrentUser();
+    final userState = context.read<UserCubit>().state;
+    if (userState is UserLoading) {
+      await context.read<UserCubit>().stream.firstWhere(
+        (s) => s is! UserLoading,
+      );
+    }
     if (!mounted) return;
 
-    if (user == null) {
+    final state = context.read<UserCubit>().state;
+    if (state is! UserAuthenticated) {
       Navigator.pushReplacementNamed(context, '/login');
       return;
     }
 
-    final online = await _connRepo.isOnline;
-    if (!mounted) return;
-
     Navigator.pushReplacementNamed(context, '/dashboard');
 
-    if (!online) {
+    final isOnline = context.read<ConnectivityCubit>().state;
+    if (!isOnline && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Offline mode — some features are unavailable'),

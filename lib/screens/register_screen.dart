@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../core/models/user.dart';
 import '../core/validators.dart';
-import '../data/local_auth_repository.dart';
-import '../data/local_user_repository.dart';
+import '../cubits/user_cubit.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
 
@@ -21,7 +21,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _homeCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
-  final _authRepo = LocalAuthRepository(LocalUserRepository());
   String? _error;
   bool _loading = false;
 
@@ -47,14 +46,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       homeName: _homeCtrl.text.trim(),
       password: _passCtrl.text,
     );
-    final error = await _authRepo.register(user);
+    final error = await context.read<UserCubit>().register(user);
     if (!mounted) return;
     setState(() => _loading = false);
     if (error != null) {
       setState(() => _error = error);
       return;
     }
-    Navigator.pushReplacementNamed(context, '/dashboard', arguments: user);
+    Navigator.pushReplacementNamed(context, '/dashboard');
   }
 
   @override

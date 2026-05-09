@@ -9,7 +9,7 @@ import '../core/repositories/automation_repository.dart';
 class FirestoreAutomationRepository implements AutomationRepository {
   static const _cacheKey = 'cached_tasks';
 
-  final _db = FirebaseFirestore.instance;
+  FirebaseFirestore get _db => FirebaseFirestore.instance;
 
   @override
   Future<List<AutomationTask>> getTasks() async {

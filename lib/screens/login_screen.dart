@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../core/validators.dart';
-import '../data/connectivity_plus_repository.dart';
-import '../data/local_auth_repository.dart';
-import '../data/local_user_repository.dart';
+import '../cubits/connectivity_cubit.dart';
+import '../cubits/user_cubit.dart';
 import '../widgets/app_button.dart';
+import '../widgets/app_logo.dart';
 import '../widgets/app_text_field.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -18,8 +19,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  final _authRepo = LocalAuthRepository(LocalUserRepository());
-  final _connRepo = ConnectivityPlusRepository();
   String? _error;
   bool _loading = false;
 
@@ -33,9 +32,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final online = await _connRepo.isOnline;
-    if (!mounted) return;
-    if (!online) {
+    final isOnline = context.read<ConnectivityCubit>().state;
+    if (!isOnline && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No internet — using local data'),
@@ -48,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _loading = true;
       _error = null;
     });
-    final (user, error) = await _authRepo.login(
+    final error = await context.read<UserCubit>().login(
       _emailCtrl.text,
       _passCtrl.text,
     );
@@ -58,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = error);
       return;
     }
-    Navigator.pushReplacementNamed(context, '/dashboard', arguments: user);
+    Navigator.pushReplacementNamed(context, '/dashboard');
   }
 
   @override
@@ -73,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 32),
-                const _AppLogo(),
+                const AppLogo(),
                 const SizedBox(height: 48),
                 const Text(
                   'Welcome back',
@@ -127,37 +125,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _AppLogo extends StatelessWidget {
-  const _AppLogo();
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    return Row(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: primary,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(Icons.device_hub, color: Colors.black, size: 28),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          'SmartNest',
-          style: TextStyle(
-            color: primary,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
     );
   }
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../core/models/user.dart';
 import '../core/validators.dart';
-import '../data/local_auth_repository.dart';
-import '../data/local_user_repository.dart';
+import '../cubits/user_cubit.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/stat_card.dart';
@@ -16,20 +16,11 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _userRepo = LocalUserRepository();
-  final _authRepo = LocalAuthRepository(LocalUserRepository());
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _homeCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  User? _user;
   bool _editing = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUser();
-  }
 
   @override
   void dispose() {
@@ -39,43 +30,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _loadUser() async {
-    final user = await _authRepo.getCurrentUser();
-    if (mounted) setState(() => _user = user);
-  }
-
-  void _startEdit() {
-    _nameCtrl.text = _user?.name ?? '';
-    _homeCtrl.text = _user?.homeName ?? '';
+  void _startEdit(User user) {
+    _nameCtrl.text = user.name;
+    _homeCtrl.text = user.homeName;
     _passCtrl.clear();
     setState(() => _editing = true);
   }
 
-  Future<void> _saveEdit() async {
-    if (_user == null || !_formKey.currentState!.validate()) return;
-    final updated = _user!.copyWith(
+  Future<void> _saveEdit(User current) async {
+    if (!_formKey.currentState!.validate()) return;
+    final updated = current.copyWith(
       name: _nameCtrl.text.trim(),
       homeName: _homeCtrl.text.trim(),
       password: _passCtrl.text.isNotEmpty ? _passCtrl.text : null,
     );
-    await _userRepo.update(updated);
-    if (!mounted) return;
-    setState(() {
-      _user = updated;
-      _editing = false;
-    });
+    await context.read<UserCubit>().updateUser(updated);
+    if (mounted) setState(() => _editing = false);
   }
 
-  Future<void> _deleteAccount() async {
+  Future<void> _deleteAccount(User user) async {
     final confirmed = await _showConfirm(
       'Delete account?',
       'This will permanently remove your account.',
     );
-    if (!confirmed || _user == null) return;
-    await _userRepo.delete(_user!.email);
-    await _authRepo.logout();
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/login');
+    if (!confirmed || !mounted) return;
+    await context.read<UserCubit>().deleteUser(user.email);
+    if (mounted) Navigator.pushReplacementNamed(context, '/login');
   }
 
   Future<void> _logout() async {
@@ -83,10 +63,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'Sign out?',
       'You will be returned to the login screen.',
     );
-    if (!confirmed) return;
-    await _authRepo.logout();
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/login');
+    if (!confirmed || !mounted) return;
+    await context.read<UserCubit>().logout();
+    if (mounted) Navigator.pushReplacementNamed(context, '/login');
   }
 
   Future<bool> _showConfirm(String title, String body) async {
@@ -116,38 +95,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        title: const Text(
-          'Profile',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          if (!_editing)
-            IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              onPressed: _startEdit,
+    return BlocBuilder<UserCubit, UserState>(
+      builder: (context, state) {
+        final user = state is UserAuthenticated ? state.user : null;
+        return Scaffold(
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            title: const Text(
+              'Profile',
+              style: TextStyle(fontWeight: FontWeight.w600),
             ),
-        ],
-      ),
-      body: _user == null
-          ? const Center(child: CircularProgressIndicator())
-          : _editing
-          ? _EditForm(
-              formKey: _formKey,
-              nameCtrl: _nameCtrl,
-              homeCtrl: _homeCtrl,
-              passCtrl: _passCtrl,
-              onSave: _saveEdit,
-              onCancel: () => setState(() => _editing = false),
-            )
-          : _ProfileView(
-              user: _user!,
-              onDelete: _deleteAccount,
-              onLogout: _logout,
-            ),
+            actions: [
+              if (!_editing && user != null)
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => _startEdit(user),
+                ),
+            ],
+          ),
+          body: user == null
+              ? const Center(child: CircularProgressIndicator())
+              : _editing
+              ? _EditForm(
+                  formKey: _formKey,
+                  nameCtrl: _nameCtrl,
+                  homeCtrl: _homeCtrl,
+                  passCtrl: _passCtrl,
+                  onSave: () => _saveEdit(user),
+                  onCancel: () => setState(() => _editing = false),
+                )
+              : _ProfileView(
+                  user: user,
+                  onDelete: () => _deleteAccount(user),
+                  onLogout: _logout,
+                ),
+        );
+      },
     );
   }
 }

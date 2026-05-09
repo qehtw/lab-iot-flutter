@@ -38,7 +38,13 @@ class MqttClientRepository implements MqttRepository {
 
     _connected =
         _client.connectionStatus?.state == MqttConnectionState.connected;
-    if (_connected) _client.updates?.listen(_onMessage);
+    if (_connected) {
+      _client.updates?.listen(
+        _onMessage,
+        onError: (_) => _connected = false,
+        onDone: () => _connected = false,
+      );
+    }
     return _connected;
   }
 

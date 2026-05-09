@@ -1,31 +1,11 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../core/models/automation_task.dart';
-import '../core/repositories/automation_repository.dart';
-import '../data/firestore_automation_repository.dart';
-import '../data/http_automation_repository.dart';
-import '../data/local_auth_repository.dart';
-import '../data/local_user_repository.dart';
+import '../cubits/automations_cubit.dart';
 
-class AutomationsScreen extends StatefulWidget {
+class AutomationsScreen extends StatelessWidget {
   const AutomationsScreen({super.key});
-
-  @override
-  State<AutomationsScreen> createState() => _AutomationsScreenState();
-}
-
-class _AutomationsScreenState extends State<AutomationsScreen> {
-  late final Future<List<AutomationTask>> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    final AutomationRepository repo = kIsWeb
-        ? HttpAutomationRepository(LocalAuthRepository(LocalUserRepository()))
-        : FirestoreAutomationRepository();
-    _future = repo.getTasks();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,24 +28,24 @@ class _AutomationsScreenState extends State<AutomationsScreen> {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
-      body: FutureBuilder<List<AutomationTask>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return const _EmptyView(message: 'Не вдалося завантажити дані');
-          }
-          final tasks = snapshot.data ?? [];
-          if (tasks.isEmpty) {
-            return const _EmptyView(message: 'Автоматизацій ще немає');
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: tasks.length,
-            itemBuilder: (_, i) => _TaskTile(task: tasks[i]),
-          );
+      body: BlocBuilder<AutomationsCubit, AutomationsState>(
+        builder: (context, state) {
+          return switch (state) {
+            AutomationsLoading() => const Center(
+              child: CircularProgressIndicator(),
+            ),
+            AutomationsError() => const _EmptyView(
+              message: 'Не вдалося завантажити дані',
+            ),
+            AutomationsLoaded(:final tasks) =>
+              tasks.isEmpty
+                  ? const _EmptyView(message: 'Автоматизацій ще немає')
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: tasks.length,
+                      itemBuilder: (_, i) => _TaskTile(task: tasks[i]),
+                    ),
+          };
         },
       ),
     );

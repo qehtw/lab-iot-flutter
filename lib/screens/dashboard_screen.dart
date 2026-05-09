@@ -1,108 +1,29 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../core/models/sensor_reading.dart';
 import '../core/models/user.dart';
-import '../data/connectivity_plus_repository.dart';
-import '../data/local_auth_repository.dart';
-import '../data/local_user_repository.dart';
-import '../data/mqtt_client_repository.dart';
+import '../cubits/connectivity_cubit.dart';
+import '../cubits/sensor_cubit.dart';
+import '../cubits/user_cubit.dart';
 import '../widgets/connectivity_banner.dart';
 import '../widgets/device_card.dart';
 
-const _mqttTopics = [
-  'smartnest/demo/temperature',
-  'smartnest/demo/humidity',
-  'smartnest/demo/motion',
-];
-
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> {
-  final _authRepo = LocalAuthRepository(LocalUserRepository());
-  final _connRepo = ConnectivityPlusRepository();
-  final _mqttRepo = MqttClientRepository();
-
-  User? _user;
-  bool _isOnline = true;
-  final Map<String, SensorReading> _sensorReadings = {};
-  bool _mqttConnected = false;
-
-  StreamSubscription<bool>? _connSub;
-  StreamSubscription<SensorReading>? _mqttSub;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUser();
-    _monitorConnectivity();
-    _startMqtt();
-  }
-
-  @override
-  void dispose() {
-    _connSub?.cancel();
-    _mqttSub?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _loadUser() async {
-    final user = await _authRepo.getCurrentUser();
-    if (mounted) setState(() => _user = user);
-  }
-
-  Future<void> _monitorConnectivity() async {
-    _isOnline = await _connRepo.isOnline;
-    if (mounted) setState(() {});
-    _connSub = _connRepo.statusStream.listen((online) {
-      if (!mounted) return;
-      setState(() => _isOnline = online);
-      if (!online) {
-        setState(() => _mqttConnected = false);
-        _mqttSub?.cancel();
-      } else if (!_mqttConnected) {
-        _startMqtt();
-      }
-    });
-  }
-
-  Future<void> _startMqtt() async {
-    _mqttSub?.cancel();
-    if (!_mqttRepo.isConnected) {
-      final ok = await _mqttRepo.connect();
-      if (!mounted || !ok) return;
-      _mqttRepo.subscribe(_mqttTopics);
-    }
-    setState(() => _mqttConnected = _mqttRepo.isConnected);
-    _mqttSub = _mqttRepo.readings.listen((r) {
-      if (mounted) {
-        setState(() {
-          _sensorReadings[r.topic] = r;
-          _mqttConnected = true;
-        });
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final isOnline = context.watch<ConnectivityCubit>().state;
+    final sensorState = context.watch<SensorCubit>().state;
+    final userState = context.watch<UserCubit>().state;
+    final user = userState is UserAuthenticated ? userState.user : null;
+
     return Scaffold(
-      appBar: _buildAppBar(context),
+      appBar: _buildAppBar(context, user),
       body: Column(
         children: [
-          ConnectivityBanner(isOnline: _isOnline),
-          Expanded(
-            child: _DashboardBody(
-              readings: _sensorReadings,
-              mqttConnected: _mqttConnected,
-            ),
-          ),
+          ConnectivityBanner(isOnline: isOnline),
+          Expanded(child: _DashboardBody(sensorState: sensorState)),
         ],
       ),
       bottomNavigationBar: _BottomNav(
@@ -115,7 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  AppBar _buildAppBar(BuildContext context) {
+  AppBar _buildAppBar(BuildContext context, User? user) {
     return AppBar(
       backgroundColor: Colors.transparent,
       automaticallyImplyLeading: false,
@@ -123,9 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _user != null
-                ? 'Hello, ${_user!.name.split(' ').first}'
-                : 'SmartNest',
+            user != null ? 'Hello, ${user.name.split(' ').first}' : 'SmartNest',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -133,7 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           Text(
-            _user?.homeName ?? '—',
+            user?.homeName ?? '—',
             style: const TextStyle(color: Colors.white54, fontSize: 12),
           ),
         ],
@@ -146,7 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: CircleAvatar(
               backgroundColor: Theme.of(context).colorScheme.primary,
               child: Text(
-                _user != null ? _user!.name[0].toUpperCase() : '?',
+                user != null ? user.name[0].toUpperCase() : '?',
                 style: const TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
@@ -161,16 +80,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class _DashboardBody extends StatelessWidget {
-  const _DashboardBody({required this.readings, required this.mqttConnected});
+  const _DashboardBody({required this.sensorState});
 
-  final Map<String, SensorReading> readings;
-  final bool mqttConnected;
+  final SensorState sensorState;
 
   String _val(String topic, String unit) {
-    final r = readings[topic];
-    if (r == null) return mqttConnected ? '…' : '—';
-    return '${r.value}$unit';
+    if (sensorState is! SensorConnected) return '—';
+    final r = (sensorState as SensorConnected).readings[topic];
+    return r == null ? '…' : '${r.value}$unit';
   }
+
+  bool get _connected => sensorState is SensorConnected;
 
   @override
   Widget build(BuildContext context) {
@@ -198,21 +118,21 @@ class _DashboardBody extends StatelessWidget {
               name: 'Temperature',
               room: 'MQTT Sensor',
               icon: Icons.thermostat,
-              isOn: mqttConnected,
+              isOn: _connected,
               value: _val('smartnest/demo/temperature', '°C'),
             ),
             DeviceCard(
               name: 'Humidity',
               room: 'MQTT Sensor',
               icon: Icons.water_drop,
-              isOn: mqttConnected,
+              isOn: _connected,
               value: _val('smartnest/demo/humidity', '%'),
             ),
             DeviceCard(
               name: 'Motion',
               room: 'MQTT Sensor',
               icon: Icons.directions_run,
-              isOn: mqttConnected,
+              isOn: _connected,
               value: _val('smartnest/demo/motion', ''),
             ),
           ],
