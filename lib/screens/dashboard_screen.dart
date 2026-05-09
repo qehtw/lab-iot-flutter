@@ -1,10 +1,32 @@
 import 'package:flutter/material.dart';
 
+import '../core/models/user.dart';
+import '../data/local_auth_repository.dart';
+import '../data/local_user_repository.dart';
 import '../widgets/device_card.dart';
 import '../widgets/stat_card.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final _authRepo = LocalAuthRepository(LocalUserRepository());
+  User? _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await _authRepo.getCurrentUser();
+    if (mounted) setState(() => _user = user);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,33 +46,38 @@ class DashboardScreen extends StatelessWidget {
     return AppBar(
       backgroundColor: Colors.transparent,
       automaticallyImplyLeading: false,
-      title: const Column(
+      title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Good morning, Alex',
-            style: TextStyle(
+            _user != null
+                ? 'Hello, ${_user!.name.split(' ').first}'
+                : 'SmartNest',
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
           Text(
-            '4 devices active',
-            style: TextStyle(color: Colors.white54, fontSize: 12),
+            _user?.homeName ?? '—',
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
           ),
         ],
       ),
       actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 16),
-          child: CircleAvatar(
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            child: const Text(
-              'A',
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
+        GestureDetector(
+          onTap: () => Navigator.pushNamed(context, '/profile'),
+          child: Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: CircleAvatar(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: Text(
+                _user != null ? _user!.name[0].toUpperCase() : '?',
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
