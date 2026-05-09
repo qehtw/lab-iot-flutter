@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/validators.dart';
+import '../data/connectivity_plus_repository.dart';
 import '../data/local_auth_repository.dart';
 import '../data/local_user_repository.dart';
 import '../widgets/app_button.dart';
@@ -18,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _authRepo = LocalAuthRepository(LocalUserRepository());
+  final _connRepo = ConnectivityPlusRepository();
   String? _error;
   bool _loading = false;
 
@@ -30,6 +32,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final online = await _connRepo.isOnline;
+    if (!mounted) return;
+    if (!online) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No internet — using local data'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+
     setState(() {
       _loading = true;
       _error = null;

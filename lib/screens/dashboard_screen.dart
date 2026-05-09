@@ -1,10 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../core/models/sensor_reading.dart';
 import '../core/models/user.dart';
+import '../data/connectivity_plus_repository.dart';
 import '../data/local_auth_repository.dart';
 import '../data/local_user_repository.dart';
+import '../data/mqtt_client_repository.dart';
+import '../widgets/connectivity_banner.dart';
 import '../widgets/device_card.dart';
-import '../widgets/stat_card.dart';
+
+const _mqttTopics = [
+  'smartnest/demo/temperature',
+  'smartnest/demo/humidity',
+  'smartnest/demo/motion',
+];
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -15,12 +26,30 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final _authRepo = LocalAuthRepository(LocalUserRepository());
+  final _connRepo = ConnectivityPlusRepository();
+  final _mqttRepo = MqttClientRepository();
+
   User? _user;
+  bool _isOnline = true;
+  final Map<String, SensorReading> _sensorReadings = {};
+  bool _mqttConnected = false;
+
+  StreamSubscription<bool>? _connSub;
+  StreamSubscription<SensorReading>? _mqttSub;
 
   @override
   void initState() {
     super.initState();
     _loadUser();
+    _monitorConnectivity();
+    _startMqtt();
+  }
+
+  @override
+  void dispose() {
+    _connSub?.cancel();
+    _mqttSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadUser() async {
@@ -28,15 +57,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (mounted) setState(() => _user = user);
   }
 
+  Future<void> _monitorConnectivity() async {
+    _isOnline = await _connRepo.isOnline;
+    if (mounted) setState(() {});
+    _connSub = _connRepo.statusStream.listen((online) {
+      if (!mounted) return;
+      setState(() => _isOnline = online);
+      if (!online) {
+        setState(() => _mqttConnected = false);
+        _mqttSub?.cancel();
+      } else if (!_mqttConnected) {
+        _startMqtt();
+      }
+    });
+  }
+
+  Future<void> _startMqtt() async {
+    _mqttSub?.cancel();
+    if (!_mqttRepo.isConnected) {
+      final ok = await _mqttRepo.connect();
+      if (!mounted || !ok) return;
+      _mqttRepo.subscribe(_mqttTopics);
+    }
+    setState(() => _mqttConnected = _mqttRepo.isConnected);
+    _mqttSub = _mqttRepo.readings.listen((r) {
+      if (mounted) {
+        setState(() {
+          _sensorReadings[r.topic] = r;
+          _mqttConnected = true;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(context),
-      body: const _DashboardBody(),
+      body: Column(
+        children: [
+          ConnectivityBanner(isOnline: _isOnline),
+          Expanded(
+            child: _DashboardBody(
+              readings: _sensorReadings,
+              mqttConnected: _mqttConnected,
+            ),
+          ),
+        ],
+      ),
       bottomNavigationBar: _BottomNav(
         currentIndex: 0,
         onTap: (i) {
-          if (i == 2) Navigator.pushNamed(context, '/profile');
+          if (i == 1) Navigator.pushNamed(context, '/profile');
         },
       ),
     );
@@ -88,28 +160,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class _DashboardBody extends StatelessWidget {
-  const _DashboardBody();
+  const _DashboardBody({
+    required this.readings,
+    required this.mqttConnected,
+  });
+
+  final Map<String, SensorReading> readings;
+  final bool mqttConnected;
+
+  String _val(String topic, String unit) {
+    final r = readings[topic];
+    if (r == null) return mqttConnected ? '…' : '—';
+    return '${r.value}$unit';
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(20),
-      children: const [
-        StatCard(
-          label: 'Active Devices',
-          value: '4 / 6',
-          icon: Icons.devices,
-          subtitle: 'Online now',
-        ),
-        SizedBox(height: 12),
-        StatCard(
-          label: 'Energy Today',
-          value: '3.8 kWh',
-          icon: Icons.bolt,
-          subtitle: '↓ 12% vs yesterday',
-        ),
-        SizedBox(height: 24),
-        Text(
+      children: [
+        const Text(
           'My Devices',
           style: TextStyle(
             color: Colors.white,
@@ -117,63 +187,37 @@ class _DashboardBody extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        SizedBox(height: 16),
-        _DevicesGrid(),
-      ],
-    );
-  }
-}
-
-class _DevicesGrid extends StatelessWidget {
-  const _DevicesGrid();
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.15,
-      children: const [
-        DeviceCard(
-          name: 'Living Room',
-          room: 'Light',
-          icon: Icons.lightbulb_outline,
-          isOn: true,
-        ),
-        DeviceCard(
-          name: 'Thermostat',
-          room: 'Hallway',
-          icon: Icons.thermostat,
-          isOn: true,
-          value: '22°C',
-        ),
-        DeviceCard(
-          name: 'Door Lock',
-          room: 'Entrance',
-          icon: Icons.lock_outline,
-          isOn: false,
-        ),
-        DeviceCard(
-          name: 'Camera',
-          room: 'Backyard',
-          icon: Icons.videocam,
-          isOn: true,
-        ),
-        DeviceCard(
-          name: 'Air Purifier',
-          room: 'Bedroom',
-          icon: Icons.air,
-          isOn: false,
-        ),
-        DeviceCard(
-          name: 'Smart Plug',
-          room: 'Kitchen',
-          icon: Icons.power,
-          isOn: true,
-          value: '1.2 kW',
+        const SizedBox(height: 16),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.15,
+          children: [
+            DeviceCard(
+              name: 'Temperature',
+              room: 'MQTT Sensor',
+              icon: Icons.thermostat,
+              isOn: mqttConnected,
+              value: _val('smartnest/demo/temperature', '°C'),
+            ),
+            DeviceCard(
+              name: 'Humidity',
+              room: 'MQTT Sensor',
+              icon: Icons.water_drop,
+              isOn: mqttConnected,
+              value: _val('smartnest/demo/humidity', '%'),
+            ),
+            DeviceCard(
+              name: 'Motion',
+              room: 'MQTT Sensor',
+              icon: Icons.directions_run,
+              isOn: mqttConnected,
+              value: _val('smartnest/demo/motion', ''),
+            ),
+          ],
         ),
       ],
     );
@@ -198,10 +242,6 @@ class _BottomNav extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(Icons.grid_view_rounded),
           label: 'Dashboard',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.bar_chart),
-          label: 'Analytics',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),

@@ -79,6 +79,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout() async {
+    final confirmed = await _showConfirm(
+      'Sign out?',
+      'You will be returned to the login screen.',
+    );
+    if (!confirmed) return;
     await _authRepo.logout();
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/login');
