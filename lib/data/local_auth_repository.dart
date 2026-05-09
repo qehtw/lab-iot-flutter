@@ -9,6 +9,7 @@ class LocalAuthRepository implements AuthRepository {
 
   final UserRepository _userRepo;
   static const _sessionKey = 'session_email';
+  static const _tokenKey = 'auth_token';
 
   Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
 
@@ -19,6 +20,7 @@ class LocalAuthRepository implements AuthRepository {
     await _userRepo.save(user);
     final prefs = await _prefs;
     await prefs.setString(_sessionKey, user.email);
+    await prefs.setString(_tokenKey, _generateToken());
     return null;
   }
 
@@ -29,6 +31,7 @@ class LocalAuthRepository implements AuthRepository {
     if (user.password != password) return (null, 'Incorrect password');
     final prefs = await _prefs;
     await prefs.setString(_sessionKey, user.email);
+    await prefs.setString(_tokenKey, _generateToken());
     return (user, null);
   }
 
@@ -36,6 +39,7 @@ class LocalAuthRepository implements AuthRepository {
   Future<void> logout() async {
     final prefs = await _prefs;
     await prefs.remove(_sessionKey);
+    await prefs.remove(_tokenKey);
   }
 
   @override
@@ -45,4 +49,12 @@ class LocalAuthRepository implements AuthRepository {
     if (email == null) return null;
     return _userRepo.findByEmail(email);
   }
+
+  @override
+  Future<String?> getToken() async {
+    final prefs = await _prefs;
+    return prefs.getString(_tokenKey);
+  }
+
+  String _generateToken() => 'tk_${DateTime.now().millisecondsSinceEpoch}';
 }

@@ -1,13 +1,26 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import 'firebase_options.dart';
+import 'screens/automations_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/register_screen.dart';
-import 'screens/sensors_screen.dart';
 import 'screens/splash_screen.dart';
 
-void main() => runApp(const SmartNestApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (!kIsWeb) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.android,
+      );
+    } catch (_) {}
+  }
+  runApp(const SmartNestApp());
+}
 
 class SmartNestApp extends StatelessWidget {
   const SmartNestApp({super.key});
@@ -32,7 +45,7 @@ class SmartNestApp extends StatelessWidget {
         '/register': (_) => const RegisterScreen(),
         '/dashboard': (_) => const DashboardScreen(),
         '/profile': (_) => const ProfileScreen(),
-        '/sensors': (_) => const SensorsScreen(),
+        '/automations': (_) => const AutomationsScreen(),
       },
     );
   }

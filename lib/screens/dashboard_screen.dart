@@ -108,7 +108,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       bottomNavigationBar: _BottomNav(
         currentIndex: 0,
         onTap: (i) {
-          if (i == 1) Navigator.pushNamed(context, '/profile');
+          if (i == 1) Navigator.pushNamed(context, '/automations');
+          if (i == 2) Navigator.pushNamed(context, '/profile');
         },
       ),
     );
@@ -242,6 +243,10 @@ class _BottomNav extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(Icons.grid_view_rounded),
           label: 'Dashboard',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.auto_awesome_outlined),
+          label: 'Автоматизації',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),
