@@ -161,10 +161,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class _DashboardBody extends StatelessWidget {
-  const _DashboardBody({
-    required this.readings,
-    required this.mqttConnected,
-  });
+  const _DashboardBody({required this.readings, required this.mqttConnected});
 
   final Map<String, SensorReading> readings;
   final bool mqttConnected;

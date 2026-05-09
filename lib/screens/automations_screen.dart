@@ -101,8 +101,7 @@ class _TaskTile extends StatelessWidget {
               task.title,
               style: TextStyle(
                 color: task.completed ? Colors.white54 : Colors.white,
-                decoration:
-                    task.completed ? TextDecoration.lineThrough : null,
+                decoration: task.completed ? TextDecoration.lineThrough : null,
                 fontSize: 14,
               ),
             ),

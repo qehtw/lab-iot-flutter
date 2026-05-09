@@ -14,9 +14,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (!kIsWeb) {
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.android,
-      );
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.android);
     } catch (_) {}
   }
   runApp(const SmartNestApp());

@@ -12,8 +12,7 @@ class HttpAutomationRepository implements AutomationRepository {
 
   final AuthRepository _authRepo;
 
-  static const _url =
-      'https://jsonplaceholder.typicode.com/todos?_limit=15';
+  static const _url = 'https://jsonplaceholder.typicode.com/todos?_limit=15';
   static const _cacheKey = 'cached_tasks';
 
   @override
