@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/models/sensor_reading.dart';
+import '../data/analytics_service.dart';
 import '../data/connectivity_plus_repository.dart';
 import '../data/mqtt_client_repository.dart';
+import '../data/shake_detector_service.dart';
 import '../widgets/sensor_tile.dart';
 
 const _topics = [
@@ -23,9 +25,14 @@ class SensorsScreen extends StatefulWidget {
 class _SensorsScreenState extends State<SensorsScreen> {
   final _mqttRepo = MqttClientRepository();
   final _connRepo = ConnectivityPlusRepository();
+  final _shakeDetector = ShakeDetectorService();
+  final _analytics = AnalyticsService();
+
   final Map<String, SensorReading> _readings = {};
   bool _connected = false;
   bool _connecting = true;
+  int _shakeCount = 0;
+
   StreamSubscription<SensorReading>? _sub;
   StreamSubscription<bool>? _connSub;
 
@@ -34,6 +41,27 @@ class _SensorsScreenState extends State<SensorsScreen> {
     super.initState();
     _connect();
     _monitorConnectivity();
+    _shakeDetector.start(_onShake);
+    debugPrint('[SensorsScreen] initState — shake detector started');
+  }
+
+  void _onShake() {
+    if (!mounted) return;
+    setState(() => _shakeCount++);
+    _analytics.logShakeDetected('sensors');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.vibration, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Text('Shake detected! (#$_shakeCount)'),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xFF1A2540),
+      ),
+    );
   }
 
   void _monitorConnectivity() {
@@ -88,6 +116,7 @@ class _SensorsScreenState extends State<SensorsScreen> {
 
   @override
   void dispose() {
+    _shakeDetector.stop();
     _connSub?.cancel();
     _sub?.cancel();
     super.dispose();
@@ -104,6 +133,11 @@ class _SensorsScreenState extends State<SensorsScreen> {
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         actions: [
+          if (_shakeCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _ShakeBadge(count: _shakeCount),
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: _StatusDot(connected: _connected, connecting: _connecting),
@@ -122,6 +156,22 @@ class _SensorsScreenState extends State<SensorsScreen> {
               itemBuilder: (_, i) =>
                   SensorTile(reading: _readings.values.elementAt(i)),
             ),
+    );
+  }
+}
+
+class _ShakeBadge extends StatelessWidget {
+  const _ShakeBadge({required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.vibration, size: 16, color: Colors.white54),
+        const SizedBox(width: 4),
+        Text('$count', style: const TextStyle(color: Colors.white54, fontSize: 13)),
+      ],
     );
   }
 }
